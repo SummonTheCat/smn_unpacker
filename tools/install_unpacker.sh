@@ -43,3 +43,45 @@ else
     echo "Error: Rust installation failed." >&2
     exit 1
 fi
+
+echo "-----------------------------------------"
+echo "Building unpacker crate from parent directory..."
+echo "-----------------------------------------"
+
+# Resolve script and project directories
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+CARGO_ROOT="$(dirname "$SCRIPT_DIR")"
+BIN_DIR="$CARGO_ROOT/bin"
+
+echo "Script directory: $SCRIPT_DIR"
+echo "Cargo project root: $CARGO_ROOT"
+echo "Output directory: $BIN_DIR"
+
+# Ensure bin directory exists
+mkdir -p "$BIN_DIR"
+
+# Detect target triple for current system
+TARGET_TRIPLE=$(rustc -vV | grep "host:" | awk '{print $2}')
+
+cd "$CARGO_ROOT"
+echo "Running cargo build --release --target $TARGET_TRIPLE ..."
+cargo build --release --target "$TARGET_TRIPLE"
+
+# Locate the crate name and binary
+if command -v jq >/dev/null 2>&1; then
+    BINARY_NAME=$(basename "$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')")
+else
+    # Fallback if jq is not available
+    BINARY_NAME=$(grep '^name\s*=' Cargo.toml | head -n 1 | cut -d '"' -f2)
+fi
+
+BINARY_PATH="$CARGO_ROOT/target/$TARGET_TRIPLE/release/$BINARY_NAME"
+
+if [ ! -f "$BINARY_PATH" ]; then
+    echo "Error: Build failed or binary not found at $BINARY_PATH" >&2
+    exit 1
+fi
+
+# Copy built binary to bin directory
+cp "$BINARY_PATH" "$BIN_DIR/"
+echo "Build complete. Binary copied to: $BIN_DIR/$BINARY_NAME"
