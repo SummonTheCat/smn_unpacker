@@ -76,5 +76,9 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
+# Copy built binary to bin directory
 cp "$BINARY_PATH" "$BIN_DIR/"
-echo "Build complete. Binary copied to: $BIN_DIR/$BINARY_NAME"
+chmod +x "$BIN_DIR/$BINARY_NAME"
+
+echo "Build complete. Binary copied and made executable at:"
+echo "  $BIN_DIR/$BINARY_NAME"
