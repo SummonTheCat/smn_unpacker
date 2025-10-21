@@ -3,22 +3,17 @@ set -e
 
 echo "Starting installation of prerequisites..."
 
-# Detect package manager and install curl if missing
-if ! command -v curl >/dev/null 2>&1; then
-    echo "curl not found. Installing curl..."
-    if command -v apt-get >/dev/null 2>&1; then
-        apt-get update -y
-        apt-get install -y curl
-    elif command -v yum >/dev/null 2>&1; then
-        yum install -y curl
-    elif command -v dnf >/dev/null 2>&1; then
-        dnf install -y curl
-    else
-        echo "Error: Unsupported system or no known package manager found (apt, yum, dnf)." >&2
-        exit 1
-    fi
+# Detect package manager and install essentials
+if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -y
+    apt-get install -y curl build-essential pkg-config libssl-dev
+elif command -v yum >/dev/null 2>&1; then
+    yum install -y curl gcc gcc-c++ make openssl-devel
+elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y curl gcc gcc-c++ make openssl-devel
 else
-    echo "curl already installed."
+    echo "Error: Unsupported system or no known package manager found (apt, yum, dnf)." >&2
+    exit 1
 fi
 
 echo "Starting installation of Rust..."
@@ -71,7 +66,6 @@ cargo build --release --target "$TARGET_TRIPLE"
 if command -v jq >/dev/null 2>&1; then
     BINARY_NAME=$(basename "$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')")
 else
-    # Fallback if jq is not available
     BINARY_NAME=$(grep '^name\s*=' Cargo.toml | head -n 1 | cut -d '"' -f2)
 fi
 
@@ -82,6 +76,5 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# Copy built binary to bin directory
 cp "$BINARY_PATH" "$BIN_DIR/"
 echo "Build complete. Binary copied to: $BIN_DIR/$BINARY_NAME"
